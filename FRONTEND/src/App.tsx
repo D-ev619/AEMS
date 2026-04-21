@@ -43,6 +43,9 @@ import {
   TimetableEntry, 
   SeatingPlan
 } from "./types";
+
+// ✅ ADD THIS LINE
+const API_BASE = "https://aems-backend.onrender.com";
 import { generateSeatingArrangement } from "./services/seatingService";
 import * as XLSX from "xlsx";
 import { jsPDF } from "jspdf";
@@ -555,10 +558,10 @@ export default function App() {
   // --- Auth Handling ---
   useEffect(() => {
     // Verify API connectivity
-    fetch("/api/health")
-      .then(res => res.json())
-      .then(data => console.log("API connectivity verified:", data))
-      .catch(err => console.error("API connectivity error:", err));
+fetch(`${API_BASE}/api/health`)
+  .then(res => res.json())
+  .then(data => console.log("API connectivity verified:", data))
+  .catch(err => console.error("API connectivity error:", err));
 
     const unsub = onAuthStateChanged(auth, (u) => {
       setUser(u);
@@ -964,29 +967,32 @@ export default function App() {
     }
   };
 
-  // API Connectivity Check
-  useEffect(() => {
-    const checkApi = async () => {
-      try {
-        console.log("[App] Checking API connectivity at /api/ping...");
-        const res = await fetch("/api/ping");
-        const contentType = res.headers.get("content-type");
-        console.log(`[App] API Response status: ${res.status}, content-type: ${contentType}`);
-        
-        if (contentType && contentType.includes("application/json")) {
-          const data = await res.json();
-          console.log("[App] API Connectivity Check Success:", data);
-        } else {
-          const text = await res.text();
-          console.error("[App] API Connectivity Check returned non-JSON:", text.substring(0, 200));
-          console.warn("[App] This usually means the request hit the SPA fallback. Check server routing.");
-        }
-      } catch (err) {
-        console.error("[App] API Connectivity Check Failed:", err);
+// API Connectivity Check
+useEffect(() => {
+  const checkApi = async () => {
+    try {
+      console.log("[App] Checking API connectivity...");
+
+      const res = await fetch(`${API_BASE}/api/ping`);
+      const contentType = res.headers.get("content-type");
+
+      console.log(`[App] API Response status: ${res.status}`);
+
+      if (contentType && contentType.includes("application/json")) {
+        const data = await res.json();
+        console.log("[App] API Connectivity Success:", data);
+      } else {
+        const text = await res.text();
+        console.error("Non-JSON response:", text);
       }
-    };
-    checkApi();
-  }, []);
+
+    } catch (err) {
+      console.error("API error:", err);
+    }
+  };
+
+  checkApi();
+}, []);
 
   const handleExcelUpload = async (file: File, type: "students" | "timetable" | "subjects") => {
     console.log(`Starting ${type} upload for file:`, file.name);
@@ -998,9 +1004,11 @@ export default function App() {
     else endpoint = "/api/upload-subjects";
     
     try {
-      console.log(`[App] Uploading ${type} to ${endpoint}`);
-      const res = await fetch(endpoint, { method: "POST", body: formData });
-      
+  console.log(`[App] Uploading ${type} to ${endpoint}`);
+  const res = await fetch(`${API_BASE}${endpoint}`, {
+    method: "POST",
+    body: formData
+  });
       const contentType = res.headers.get("content-type");
       console.log(`[App] Response status: ${res.status}, content-type: ${contentType}`);
       if (!res.ok) {
