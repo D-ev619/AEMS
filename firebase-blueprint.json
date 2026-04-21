@@ -1,0 +1,112 @@
+{
+  "entities": {
+    "Programme": {
+      "title": "Programme",
+      "description": "A college programme (e.g., BCA, B.Tech)",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "description": "Programme name" }
+      },
+      "required": ["name"]
+    },
+    "Subject": {
+      "title": "Subject",
+      "description": "A course subject",
+      "type": "object",
+      "properties": {
+        "programmeId": { "type": "string", "description": "ID of the programme" },
+        "semester": { "type": "number", "description": "Semester number" },
+        "code": { "type": "string", "description": "Subject code" },
+        "name": { "type": "string", "description": "Subject name" },
+        "type": { "type": "string", "enum": ["Theory", "Practical"], "description": "Subject type" }
+      },
+      "required": ["programmeId", "semester", "code", "name", "type"]
+    },
+    "Student": {
+      "title": "Student",
+      "description": "A student enrolled in a programme",
+      "type": "object",
+      "properties": {
+        "studentId": { "type": "string", "description": "Unique student ID" },
+        "name": { "type": "string", "description": "Student name" },
+        "programmeId": { "type": "string", "description": "ID of the programme" },
+        "specialization": { "type": "string", "description": "Specialization" },
+        "semester": { "type": "number", "description": "Current semester" }
+      },
+      "required": ["studentId", "name", "programmeId", "semester"]
+    },
+    "Room": {
+      "title": "Room",
+      "description": "An exam room",
+      "type": "object",
+      "properties": {
+        "roomNumber": { "type": "string", "description": "Room number" },
+        "rows": { "type": "number", "description": "Total rows" },
+        "seatsPerRow": { "type": "number", "description": "Seats per row" },
+        "capacity": { "type": "number", "description": "Total capacity (Rows * Seats Per Row)" }
+      },
+      "required": ["roomNumber", "rows", "seatsPerRow", "capacity"]
+    },
+    "Timetable": {
+      "title": "Timetable",
+      "description": "Exam schedule entry",
+      "type": "object",
+      "properties": {
+        "date": { "type": "string", "format": "date", "description": "Exam date" },
+        "timeSlot": { "type": "string", "description": "Time slot (e.g., 10:00 AM - 1:00 PM)" },
+        "programmeId": { "type": "string", "description": "Programme ID" },
+        "semester": { "type": "number", "description": "Semester" },
+        "subjectId": { "type": "string", "description": "Subject ID" }
+      },
+      "required": ["date", "timeSlot", "programmeId", "semester", "subjectId"]
+    },
+    "Invigilator": {
+      "title": "Invigilator",
+      "description": "Faculty member for invigilation",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "description": "Faculty name" },
+        "department": { "type": "string", "description": "Department" },
+        "availability": { "type": "string", "description": "Availability notes" }
+      },
+      "required": ["name", "department"]
+    },
+    "SeatingPlan": {
+      "title": "Seating Plan",
+      "description": "Generated seating arrangement for a specific exam session",
+      "type": "object",
+      "properties": {
+        "date": { "type": "string", "description": "Exam date" },
+        "timeSlot": { "type": "string", "description": "Time slot" },
+        "roomId": { "type": "string", "description": "Room ID" },
+        "row": { "type": "number", "description": "Row number" },
+        "seat": { "type": "number", "description": "Seat number" },
+        "studentId": { "type": "string", "description": "Student ID" },
+        "subjectId": { "type": "string", "description": "Subject ID" }
+      },
+      "required": ["date", "timeSlot", "roomId", "row", "seat", "studentId", "subjectId"]
+    },
+    "InvigilatorDuty": {
+      "title": "Invigilator Duty",
+      "description": "Assigned duty for an invigilator",
+      "type": "object",
+      "properties": {
+        "invigilatorId": { "type": "string", "description": "Invigilator ID" },
+        "roomId": { "type": "string", "description": "Room ID" },
+        "date": { "type": "string", "description": "Exam date" },
+        "timeSlot": { "type": "string", "description": "Time slot" }
+      },
+      "required": ["invigilatorId", "roomId", "date", "timeSlot"]
+    }
+  },
+  "firestore": {
+    "/programmes/{id}": { "schema": "Programme", "description": "Collection of programmes" },
+    "/subjects/{id}": { "schema": "Subject", "description": "Collection of subjects" },
+    "/students/{id}": { "schema": "Student", "description": "Collection of students" },
+    "/rooms/{id}": { "schema": "Room", "description": "Collection of rooms" },
+    "/timetable/{id}": { "schema": "Timetable", "description": "Collection of exam schedules" },
+    "/invigilators/{id}": { "schema": "Invigilator", "description": "Collection of invigilators" },
+    "/seating_plans/{id}": { "schema": "SeatingPlan", "description": "Collection of generated seating plans" },
+    "/invigilator_duties/{id}": { "schema": "InvigilatorDuty", "description": "Collection of invigilator duties" }
+  }
+}

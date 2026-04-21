@@ -1,0 +1,203 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users
+    // Fields:
+    //   - name: string (required)
+    //   - email: string (required, email format)
+    //   - role: string (required, ['admin', 'user'])
+    //   - lastLogin: string (required, ISO date)
+    //
+    // Collection: programmes
+    // Fields:
+    //   - name: string (required, 1-100 chars)
+    //
+    // Collection: subjects
+    // Fields:
+    //   - programmeId: string (required)
+    //   - semester: number (required, > 0)
+    //   - code: string (required)
+    //   - name: string (required)
+    //   - type: string (required, ['Theory', 'Practical'])
+    //
+    // Collection: students
+    // Fields:
+    //   - studentId: string (required)
+    //   - name: string (required)
+    //   - programmeId: string (required)
+    //   - semester: number (required)
+    //
+    // Collection: rooms
+    // Fields:
+    //   - roomNumber: string (required)
+    //   - rows: number (required)
+    //   - seatsPerRow: number (required)
+    //   - capacity: number (required, rows * seatsPerRow)
+    //
+    // Collection: timetable
+    // Fields:
+    //   - date: string (required)
+    //   - timeSlot: string (required)
+    //   - programmeId: string (required)
+    //   - semester: number (required)
+    //   - subjectId: string (required)
+    //
+    // Collection: invigilators
+    // Fields:
+    //   - name: string (required)
+    //   - department: string (required)
+    //   - availability: string (optional)
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        (
+          (request.auth.token.email == "p96540114@gmail.com" && request.auth.token.email_verified == true) ||
+          (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+           get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin')
+        );
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isValidEmail(email) {
+      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+
+    function isValidDateString(dateStr) {
+      return dateStr is string && dateStr.matches("^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}.*Z?$");
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+
+    function isValidUser(data) {
+      return data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
+             data.email is string && isValidEmail(data.email) &&
+             data.role in ['admin', 'user'] &&
+             data.lastLogin is string;
+    }
+
+    function isValidProgramme(data) {
+      return data.name is string && data.name.size() > 0 && data.name.size() < 100;
+    }
+
+    function isValidSubject(data) {
+      return data.programmeId is string &&
+             data.semester is number && data.semester >= 0 &&
+             data.code is string && data.code.size() > 0 && data.code.size() < 20 &&
+             data.name is string && data.name.size() > 0 && data.name.size() < 200 &&
+             data.type in ['Theory', 'Practical'];
+    }
+
+    function isValidStudent(data) {
+      return data.studentId is string && data.studentId.size() > 0 && data.studentId.size() < 100 &&
+             data.name is string && data.name.size() > 0 && data.name.size() < 200 &&
+             data.programmeId is string &&
+             data.semester is number &&
+             (!('specialization' in data) || data.specialization is string);
+    }
+
+    function isValidRoom(data) {
+      return data.roomNumber is string && data.roomNumber.size() > 0 && data.roomNumber.size() < 20 &&
+             data.columns is number && data.columns > 0 && data.columns < 20 &&
+             data.seatsPerColumn is list && data.seatsPerColumn.size() == data.columns &&
+             data.capacity is number && data.capacity > 0;
+    }
+
+    function isValidTimetable(data) {
+      return data.date is string && data.date.size() > 0 &&
+             data.timeSlot is string && data.timeSlot.size() > 0 &&
+             data.programmeId is string &&
+             data.semester is number &&
+             data.subjectId is string;
+    }
+
+    function isValidInvigilator(data) {
+      return data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
+             data.department is string && data.department.size() > 0 && data.department.size() < 100;
+    }
+
+    // ===============================================================
+    // Collection Rules
+    // ===============================================================
+
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow create: if isOwner(userId) && isValidUser(request.resource.data) && (request.resource.data.role == 'user' || isAdmin());
+      allow update: if isOwner(userId) && isValidUser(request.resource.data) && (request.resource.data.role == resource.data.role || isAdmin());
+      allow delete: if isAdmin();
+    }
+
+    match /programmes/{id} {
+      allow read: if isAuthenticated();
+      allow create: if isAdmin() && isValidProgramme(request.resource.data);
+      allow update: if isAdmin() && isValidProgramme(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /subjects/{id} {
+      allow read: if isAuthenticated();
+      allow create: if isAdmin() && isValidSubject(request.resource.data);
+      allow update: if isAdmin() && isValidSubject(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /students/{id} {
+      allow read: if isAuthenticated();
+      allow create: if isAdmin() && isValidStudent(request.resource.data);
+      allow update: if isAdmin() && isValidStudent(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /rooms/{id} {
+      allow read: if isAuthenticated();
+      allow create: if isAdmin() && isValidRoom(request.resource.data);
+      allow update: if isAdmin() && isValidRoom(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /timetable/{id} {
+      allow read: if isAuthenticated();
+      allow create: if isAdmin() && isValidTimetable(request.resource.data);
+      allow update: if isAdmin() && isValidTimetable(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /invigilators/{id} {
+      allow read: if isAuthenticated();
+      allow create: if isAdmin() && isValidInvigilator(request.resource.data);
+      allow update: if isAdmin() && isValidInvigilator(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /seating_plans/{id} {
+      allow read: if isAuthenticated();
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /invigilator_duties/{id} {
+      allow read: if isAuthenticated();
+      allow create, update, delete: if isAdmin();
+    }
+  }
+}
